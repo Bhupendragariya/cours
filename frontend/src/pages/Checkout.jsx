@@ -18,18 +18,7 @@ function Checkout() {
     postcode: "",
   });
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log(" submit form and ", formData);
-  };
 
   const handleApply = () => {
     alert(`Applied Coupon: ${coupon}`);
@@ -37,7 +26,7 @@ function Checkout() {
 
   return (
     <>
-      <div className="flex items-center mx-auto gap-5 flex-col md:flex-row  ">
+      <div className="flex  mx-auto gap-5 flex-col md:flex-row  ">
         <div className="border  rounded-xl w-full mx-auto pt-8">
           <h1 className="text-center items-center text-2xl ">
             Billing details
