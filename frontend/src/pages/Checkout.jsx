@@ -18,7 +18,18 @@ function Checkout() {
     postcode: "",
   });
 
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    console.log(" submit form and ", formData);
+  };
 
   const handleApply = () => {
     alert(`Applied Coupon: ${coupon}`);
