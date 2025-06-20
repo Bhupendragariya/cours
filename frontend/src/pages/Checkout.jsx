@@ -183,7 +183,7 @@ function Checkout() {
                     setStateId("");
                   }}
                   placeholder="Select Country"
-                  className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500  "
                 />
               </div>
 
@@ -322,8 +322,7 @@ function Checkout() {
                     className="accent-blue-500"
                   />
                   <span className="text-lg font-medium">
-                    
-                    Credit Card/Debit Card/NetBanking 
+                    Credit Card/Debit Card/NetBanking
                   </span>
                 </label>
                 {selected === "online" && (
@@ -336,17 +335,20 @@ function Checkout() {
                   </div>
                 )}
               </div>
-            
             </div>
 
-              <p className="my-5 text-md">
-                Your personal data will be used to process your order, support
-                your experience throughout this website, and for other purposes
-                described in our <Link to="/"> privacy policy.</Link>
-              </p>
+            <p className="my-5 text-md">
+              Your personal data will be used to process your order, support
+              your experience throughout this website, and for other purposes
+              described in our <Link to="/"> privacy policy.</Link>
+            </p>
 
-
-              <button onClick="/" className="text-xl text-white bg-blue-700 w-full py-3 rounded-md my-5">PLACE ORDER</button>
+            <button
+              onClick="/"
+              className="text-xl text-white bg-blue-700 w-full py-3 rounded-md my-5"
+            >
+              PLACE ORDER
+            </button>
           </div>
         </div>
       </div>
