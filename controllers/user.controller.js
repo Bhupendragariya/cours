@@ -288,7 +288,18 @@ export const AddCourse = async (req, res) => {
 };
 
 export const purchaseCourse = async (req, res, next) => {
-  const { courseId, referralCode } = req.body;
+  const {
+    courseId,
+    referralCode,
+    Name,
+    Email,
+    Phone,
+    Gender,
+    Duration,
+    Country,
+    State,
+    Postcode,
+  } = req.body;
 
   try {
     const course = await Course.findById(courseId);
@@ -331,6 +342,19 @@ export const purchaseCourse = async (req, res, next) => {
         .json({ message: "Final amount cannot be negative" });
     }
 
+    if (
+      !Name ||
+      !Duration ||
+      !Email ||
+      !Phone ||
+      !Gender ||
+      !Country ||
+      !State ||
+      !Postcode
+    ) {
+      return console.log(" please full fill this failed");
+    }
+
     const order = await Order.create({
       courseId,
       referrerId: referrer?._id || null,
@@ -339,6 +363,14 @@ export const purchaseCourse = async (req, res, next) => {
       commissionEarned,
       discountAmount,
       finalAmount,
+      Name,
+      Email,
+      Phone,
+      Gender,
+      Duration,
+      Country,
+      State,
+      Postcode,
     });
     await order.save();
 

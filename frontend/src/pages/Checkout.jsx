@@ -163,7 +163,7 @@ function Checkout() {
                 >
                   <option>3 Month</option>
                   <option>6 Month</option>
-                  <option>1 Year</option>
+                  
                 </select>
               </div>
 
@@ -183,7 +183,7 @@ function Checkout() {
                     setStateId("");
                   }}
                   placeholder="Select Country"
-                  className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500  "
+                  className="!border-none !outline-none rounded-none "
                 />
               </div>
 
