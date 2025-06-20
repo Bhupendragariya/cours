@@ -2,6 +2,8 @@ import { useState } from "react";
 import { CountrySelect, StateSelect } from "react-country-state-city";
 import "react-country-state-city/dist/react-country-state-city.css";
 import { Link } from "react-router-dom";
+import axios from 'axios';
+
 
 function Checkout() {
   const [countryId, setCountryId] = useState("india");
@@ -34,6 +36,18 @@ function Checkout() {
   const handleApply = () => {
     alert(`Applied Coupon: ${coupon}`);
   };
+
+
+  async function Order() {
+    try {
+      const response = await axios.put(`http://localhost:5000/app/v1/user/purchase`, {})
+      console.log('Purchase successful:', response.data);
+      
+    } catch (error) {
+      console.error('Error setting up the request:', error.message);
+    }
+     
+  }
 
   return (
     <>
@@ -340,11 +354,11 @@ function Checkout() {
             <p className="my-5 text-md">
               Your personal data will be used to process your order, support
               your experience throughout this website, and for other purposes
-              described in our <Link to="/"> privacy policy.</Link>
+              described in our <Link to="/policy"> privacy policy.</Link>
             </p>
 
             <button
-              onClick="/"
+              onClick={Order}
               className="text-xl text-white bg-blue-700 w-full py-3 rounded-md my-5"
             >
               PLACE ORDER

@@ -16,9 +16,6 @@ const orderSchema = new mongoose.Schema(
       ref: "Course",
     },
 
-  
-
-
     commissionEarned: {
       type: Number,
       default: 0,
@@ -28,6 +25,8 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+
+    
 
 
      Name:{

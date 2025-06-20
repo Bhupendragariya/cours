@@ -21,7 +21,7 @@ router.post("/login", login);
 router.get("/admin", isAdminAuthenticated, getAdminDashboard);
 router.post("/purchase", isEmployeeAuthenticated, purchaseCourse);
 router.post("/addCourse", isAdminAuthenticated, AddCourse);
-// router.post("/newAdmin",  AddAdmin);
+router.post("/newAdmin",  AddAdmin);
 router.put("/addDiscount", isAdminAuthenticated, updateReferral);
 router.get("/referral", isEmployeeAuthenticated, getReferralSettings);
 

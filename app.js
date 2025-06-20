@@ -31,6 +31,10 @@ app.use("/app/v1/user", userRouter)
 
 app.use(errorMiddleware)
 
+app.get("/", (req, res) => {
+  res.send("API is working");
+});
+
 const PORT = process.env.PORT || 4000
 
 dbConnection()
