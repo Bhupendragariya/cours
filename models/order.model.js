@@ -2,9 +2,15 @@ import mongoose from "mongoose";
 
 const orderSchema = new mongoose.Schema(
   {
-    amount: Number,
+    amount: {
+      type: Number,
+      required: true,
+    },
 
-    finalAmount: Number,
+    finalAmount: {
+      type: Number,
+      required: true,
+    },
 
     referrerId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -25,7 +31,24 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-
+    paymentMethod: {
+      type: String,
+      enum: ["online", "offline"],
+      required: true,
+    },
+    paymentStatus: {
+      type: String,
+      enum: ["created", "pending", "paid", "failed"],
+      default: "created", 
+    },
+      razorpayOrderId: {
+      type: String,
+      default: null,
+    },
+    razorpayPaymentId: {
+      type: String,
+      default: null,
+    },
     
 
 

@@ -299,6 +299,7 @@ export const purchaseCourse = async (req, res, next) => {
     Country,
     State,
     Postcode,
+    paymentMethod
   } = req.body;
 
   try {
@@ -350,11 +351,11 @@ export const purchaseCourse = async (req, res, next) => {
       !Gender ||
       !Country ||
       !State ||
-      !Postcode
+      !Postcode ||
+      !paymentMethod
     ) {
-      return console.log(" please full fill this failed");
+      return res.status(400).json({ message: "Please fill all required fields" });
     }
-
     const order = await Order.create({
       courseId,
       referrerId: referrer?._id || null,
