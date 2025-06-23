@@ -299,12 +299,13 @@ export const purchaseCourse = async (req, res, next) => {
     Country,
     State,
     Postcode,
-    paymentMethod
+    paymentMethod,
   } = req.body;
 
   try {
     const course = await Course.findById(courseId);
     if (!course) return res.status(404).send("Course not found");
+    
 
     const settings = await ReferralSettings.findOne();
 
@@ -312,20 +313,33 @@ export const purchaseCourse = async (req, res, next) => {
     const commissionPercent = settings?.commissionPercent || 0;
 
     let referrer = 0;
+    let referralBy = null;
     let commissionEarned = 0;
     let discountAmount = 0;
+    let appliedCoupon = false;
 
     if (referralCode) {
-      if (referralCode === req.user.referralCode) {
+     
+       if (referralCode === req.user.referralCode) {
         return res
           .status(400)
           .json({ message: "You cannot use your own referral code" });
       }
-      referrer = await User.findOne({ referralCode, role: "employee" });
-      if (!referrer)
+      
+      const referrer = await User.findOne({ referralCode, role: "employee" });
+
+
+      if (!referrer) {
         return res.status(400).json({ message: "Invalid referral code" });
+      }
+
+      referralBy = referrer._id;
+      
+      appliedCoupon = true;
       discountAmount = discount;
-      commissionEarned = ((course.price - discount) * commissionPercent) / 100;
+      commissionEarned =
+        ((course.price - discountAmount) * commissionPercent) / 100;
+
       referrer.earnings += commissionEarned;
       referrer.referredSales += 1;
       await referrer.save();
@@ -337,6 +351,10 @@ export const purchaseCourse = async (req, res, next) => {
       );
     }
     const finalAmount = course.price - discountAmount;
+
+
+
+    
     if (finalAmount < 0) {
       return res
         .status(400)
@@ -354,11 +372,46 @@ export const purchaseCourse = async (req, res, next) => {
       !Postcode ||
       !paymentMethod
     ) {
-      return res.status(400).json({ message: "Please fill all required fields" });
+      return res
+        .status(400)
+        .json({ message: "Please fill all required fields" });
     }
-    const order = await Order.create({
+
+
+      if (paymentMethod === "offline") {
+      const order = await Order.create({
+        courseId,
+        referrerId: referrer?._id || null,
+        amount: course.price,
+        finalAmount,
+        commissionEarned,
+        discountAmount,
+        Name,
+        Email,
+        Phone,
+        Gender,
+        Duration,
+        Country,
+        State,
+        Postcode,
+        paymentMethod,
+        paymentStatus: "pending", 
+      });
+
+      course.totalSales += 1;
+      await course.save();
+
+      return res.status(200).json({
+        order,
+        message: "Offline order created. Please visit our office to complete the payment.",
+      });
+    }
+
+    if (paymentMethod === "online") {
+      
+      const order = await Order.create({
       courseId,
-      referrerId: referrer?._id || null,
+      referrerId: referralBy,
       amount: course.price,
       finalAmount,
       commissionEarned,
@@ -372,7 +425,12 @@ export const purchaseCourse = async (req, res, next) => {
       Country,
       State,
       Postcode,
+      appliedCoupon,
+      paymentMethod,
+      paymentStatus: "created",
+      razorpayOrderId: razorpayOrder.id,
     });
+
     await order.save();
 
     course.totalSales += 1;
@@ -382,6 +440,9 @@ export const purchaseCourse = async (req, res, next) => {
       order,
       message: "Course purchased successfully",
     });
+      
+    }
+    
   } catch (error) {
     return next(new ErrorHandler(error.message, 500));
   }

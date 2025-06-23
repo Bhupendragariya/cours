@@ -39,9 +39,9 @@ const orderSchema = new mongoose.Schema(
     paymentStatus: {
       type: String,
       enum: ["created", "pending", "paid", "failed"],
-      default: "created", 
+      default: "created",
     },
-      razorpayOrderId: {
+    razorpayOrderId: {
       type: String,
       default: null,
     },
@@ -49,47 +49,51 @@ const orderSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-    
+    appliedWallet: { 
+      type: Boolean,
+       default: false 
+      },
+    appliedCoupon: {
+       type: Boolean,
+        default: false 
+      },
+  
 
-
-     Name:{
+    Name: {
       type: String,
       required: true,
-     },
+    },
 
-      Email:{
+    Email: {
       type: String,
       required: [true, "Email is required"],
-     },
-      Phone:{
+    },
+    Phone: {
       type: Number,
       required: true,
-     },
-      Gender:{
+    },
+    Gender: {
       type: String,
       required: true,
       enum: ["Male", "Female", "other"],
-     },
-      Duration:{
+    },
+    Duration: {
       type: String,
       required: true,
       enum: ["3 Month", "6 Month"],
-     },
-      Country:{
+    },
+    Country: {
       type: String,
       required: true,
-     },
-      State:{
+    },
+    State: {
       type: String,
       required: true,
-     },
-      Postcode:{
+    },
+    Postcode: {
       type: Number,
       required: true,
-     },
-
-
-      
+    },
   },
 
   { timestamps: true }
