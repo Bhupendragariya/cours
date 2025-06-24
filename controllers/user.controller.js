@@ -58,17 +58,20 @@ export const refreshAccessToken = catchAsyncErrors(async (req, res, next) => {
       return next(new ErrorHandler(401, "invalid refresh  token"));
     }
 
-    if (incomingRefreshToken !== user.refreshToken) {
-      return next(new ErrorHandler(401, "refresh token is not valid"));
+  
+    if (!user.refreshToken || user.refreshToken !== incomingRefreshToken) {
+      return next(new ErrorHandler("Invalid refresh token", 401));
     }
 
-    const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
+    const { accessToken, refreshToken:newRefreshToken } = await generateAccessAndRefreshTokens(
       user._id
     );
+    user.refreshToken = newRefreshToken;
+    await user.save();
 
     const cookieName = user.role === "Admin" ? "adminToken" : "employeeToken";
 
-    res.cookie(cookieName, refreshToken, {
+    res.cookie(cookieName, newRefreshToken, {
       httpOnly: true,
       sameSite: "Strict",
     });
@@ -76,7 +79,6 @@ export const refreshAccessToken = catchAsyncErrors(async (req, res, next) => {
     res.status(200).json({
       message: "Access token refreshed successfully",
       accessToken,
-      refreshToken,
     });
   } catch (error) {
     return next(new ErrorHandler(401, "invalid refresh token"));
@@ -137,7 +139,6 @@ export const registerUser = catchAsyncErrors(async (req, res, next) => {
 
     res.status(200).json({
       accessToken,
-      refreshToken,
       user,
       message: "login  successfully",
     });
@@ -166,11 +167,6 @@ export const login = catchAsyncErrors(async (req, res, next) => {
       return next(new ErrorHandler(" Invalid user and password ", 400));
     }
 
-    if (user.role !== "employee") {
-      return next(
-        new ErrorHandler("You are not authorized to access this resource", 403)
-      );
-    }
 
     const {
       accessToken,
@@ -180,14 +176,13 @@ export const login = catchAsyncErrors(async (req, res, next) => {
 
     const cookieName = userRole === "Admin" ? "adminToken" : "employeeToken";
 
-    res.cookie(cookieName, accessToken, {
+    res.cookie(cookieName, refreshToken, {
       httpOnly: true,
       sameSite: "Strict",
     });
 
     res.status(200).json({
       accessToken,
-      refreshToken,
       user,
       message: "login  successfully",
     });

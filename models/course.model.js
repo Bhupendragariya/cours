@@ -17,7 +17,6 @@ const courseSchema = new mongoose.Schema(
     },
     thumbnail: {
       type: String, 
-      
     },
   },
   { timestamps: true }
