@@ -1,4 +1,6 @@
 import User from "../models/user.model.js";
+import Razorpay from "razorpay";
+import crypto from "crypto";
 import Course from "../models/course.model.js";
 import Order from "../models/order.model.js";
 import { catchAsyncErrors } from "../middlewares/catchAsyncError.js";
@@ -7,23 +9,19 @@ import ReferralSettings from "../models/referral.model.js";
 import { generateAccessAndRefreshTokens } from "../utils/jwtToken.js";
 import jwt from "jsonwebtoken";
 
-export const updateReferral = catchAsyncErrors(async (req, res, next) => {
-  const { commissionPercent, referralDiscount } = req.body;
-  try {
-    const settings = await ReferralSettings.findOneAndUpdate(
-      {},
-      { commissionPercent, referralDiscount },
-      { new: true, upsert: true }
-    );
+import dotenv from 'dotenv';
 
-    res.status(200).json({
-      success: true,
-      message: "Referral settings updated",
-      settings,
-    });
-  } catch (error) {
-    return next(new ErrorHandler(error.message, 500));
-  }
+
+
+
+
+dotenv.config();
+
+
+
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
 export const getReferralSettings = catchAsyncErrors(async (req, res, next) => {
@@ -198,98 +196,9 @@ export const login = catchAsyncErrors(async (req, res, next) => {
   }
 });
 
-export const AddAdmin = catchAsyncErrors(async (req, res, next) => {
-  const { firstName, lastName, email, password, phone, gender, dob, role } =
-    req.body;
-
-  try {
-    if (
-      !firstName ||
-      !lastName ||
-      !email ||
-      !password ||
-      !phone ||
-      !gender ||
-      !dob ||
-      !role
-    ) {
-      return next(new ErrorHandler("Please fill out the full form!", 400));
-    }
-
-    const isAdmin = await User.findOne({ email });
-
-    if (isAdmin) {
-      return next(
-        new ErrorHandler(`Admin with the email ${email} already exists.`, 400)
-      );
-    }
-
-    if (role !== "Admin") {
-      return next(new ErrorHandler("invalid role assignment", 403));
-    }
-
-    const user = await User.create({
-      firstName,
-      lastName,
-      email,
-      phone,
-      password,
-      gender,
-      dob,
-      role: "Admin",
-    });
-
-    const {
-      accessToken,
-      refreshToken,
-      role: userRole,
-    } = await generateAccessAndRefreshTokens(user._id);
-
-    const cookieName = userRole === "Admin" ? "adminToken" : "employeeToken";
-
-    res.cookie(cookieName, accessToken, {
-      httpOnly: true,
-      sameSite: "Strict",
-    });
-
-    res.status(200).json({
-      accessToken,
-      refreshToken,
-      user,
-      message: "admin create successfully",
-    });
-  } catch (error) {
-    return next(new ErrorHandler(error.message, 500));
-  }
-});
-
-export const AddCourse = async (req, res) => {
-  const { title, description, price, thumbnail } = req.body;
-
-  try {
-    if (!title || !description || !price || !thumbnail) {
-      return console.log(" please full fill this failed");
-    }
-
-    await Course.create({
-      title,
-      description,
-      price,
-      thumbnail,
-    });
-
-    res.status(201).json({
-      success: true,
-      message: "Message sent successfully",
-    });
-  } catch (error) {
-    return next(new ErrorHandler(error.message, 500));
-  }
-};
-
-export const purchaseCourse = async (req, res, next) => {
+export const purchaseCourse = catchAsyncErrors(async (req, res, next) => {
   const {
-    courseId,
+    courseIds,
     referralCode,
     Name,
     Email,
@@ -303,9 +212,22 @@ export const purchaseCourse = async (req, res, next) => {
   } = req.body;
 
   try {
-    const course = await Course.findById(courseId);
-    if (!course) return res.status(404).send("Course not found");
-    
+    if (!courseIds || courseIds.length === 0) {
+      return next(
+        new ErrorHandler("At least one course must be selected", 400)
+      );
+    }
+
+    const courses = await Course.find({ _id: { $in: courseIds } });
+
+    if (!courses || courses.length === 0)
+      return next(new ErrorHandler("Course not found", 404));
+
+    let totalPrice = 0;
+
+    for (const course of courses) {
+      totalPrice += course.price;
+    }
 
     const settings = await ReferralSettings.findOne();
 
@@ -313,34 +235,33 @@ export const purchaseCourse = async (req, res, next) => {
     const commissionPercent = settings?.commissionPercent || 0;
 
     let referrer = 0;
+    let walletUsed = 0;
     let referralBy = null;
     let commissionEarned = 0;
     let discountAmount = 0;
     let appliedCoupon = false;
 
     if (referralCode) {
-     
-       if (referralCode === req.user.referralCode) {
-        return res
-          .status(400)
-          .json({ message: "You cannot use your own referral code" });
+      if (referralCode === req.user.referralCode) {
+        return next(
+          new ErrorHandler("You cannot use your own referral code", 400)
+        );
       }
-      
-      const referrer = await User.findOne({ referralCode, role: "employee" });
 
+      referrer = await User.findOne({ referralCode, role: "employee" });
 
       if (!referrer) {
-        return res.status(400).json({ message: "Invalid referral code" });
+        return next(new ErrorHandler("Invalid referral code", 400));
       }
 
       referralBy = referrer._id;
-      
       appliedCoupon = true;
       discountAmount = discount;
       commissionEarned =
-        ((course.price - discountAmount) * commissionPercent) / 100;
+        ((totalPrice - discountAmount) * commissionPercent) / 100;
 
       referrer.earnings += commissionEarned;
+      referrer.wallet += commissionEarned;
       referrer.referredSales += 1;
       await referrer.save();
 
@@ -350,15 +271,24 @@ export const purchaseCourse = async (req, res, next) => {
         { new: true, upsert: true }
       );
     }
-    const finalAmount = course.price - discountAmount;
 
+    let finalAmount = totalPrice - discountAmount;
 
-
-    
     if (finalAmount < 0) {
-      return res
-        .status(400)
-        .json({ message: "Final amount cannot be negative" });
+      return next(new ErrorHandler("final amount cannot be negative", 400));
+    }
+
+    if (req.body.appliedWallet && req.user.wallet > 0) {
+      if (req.user.wallet >= finalAmount) {
+        walletUsed = finalAmount;
+        finalAmount = 0;
+      } else {
+        walletUsed = req.user.wallet;
+        finalAmount -= req.user.wallet;
+      }
+
+      req.user.wallet -= walletUsed;
+      await req.user.save();
     }
 
     if (
@@ -372,20 +302,24 @@ export const purchaseCourse = async (req, res, next) => {
       !Postcode ||
       !paymentMethod
     ) {
-      return res
-        .status(400)
-        .json({ message: "Please fill all required fields" });
+      return next(new ErrorHandler("Please fill all required fields", 400));
     }
 
+    const lastOrder = await Order.findOne({}).sort({ orderNumber: -1 }).exec();
+    const nextOrderNumber = lastOrder ? lastOrder.orderNumber + 1 : 1;
 
-      if (paymentMethod === "offline") {
+    if (paymentMethod === "offline") {
       const order = await Order.create({
-        courseId,
-        referrerId: referrer?._id || null,
-        amount: course.price,
+        orderNumber: nextOrderNumber,
+        courseIds,
+        walletUsed,
+        referrerId: referralBy,
+        amount: totalPrice,
         finalAmount,
         commissionEarned,
         discountAmount,
+        appliedCoupon,
+        appliedWallet: req.body.appliedWallet || false,
         Name,
         Email,
         Phone,
@@ -395,77 +329,131 @@ export const purchaseCourse = async (req, res, next) => {
         State,
         Postcode,
         paymentMethod,
-        paymentStatus: "pending", 
+        paymentStatus: "pending",
       });
 
-      course.totalSales += 1;
-      await course.save();
+      for (const course of courses) {
+        course.totalSales += 1;
+        await course.save();
+      }
+
+      await order.save();
 
       return res.status(200).json({
         order,
-        message: "Offline order created. Please visit our office to complete the payment.",
+        message:
+          "Offline order created. Please visit our office to complete the payment.",
       });
     }
 
     if (paymentMethod === "online") {
-      
+      const options = {
+        amount: (finalAmount * 100),
+        currency: "INR",
+        receipt: `receipt_order_${Date.now()}`,
+      };
+
+      const razorpayOrder = await razorpay.orders.create(options);
+
       const order = await Order.create({
-      courseId,
-      referrerId: referralBy,
-      amount: course.price,
-      finalAmount,
-      commissionEarned,
-      discountAmount,
-      finalAmount,
-      Name,
-      Email,
-      Phone,
-      Gender,
-      Duration,
-      Country,
-      State,
-      Postcode,
-      appliedCoupon,
-      paymentMethod,
-      paymentStatus: "created",
-      razorpayOrderId: razorpayOrder.id,
-    });
+        courseIds,
+        referrerId: referralBy,
+        amount: totalPrice,
+        finalAmount,
+        commissionEarned,
+        discountAmount,
+        appliedWallet: req.body.appliedWallet || false,
+        finalAmount,
+        Name,
+        Email,
+        Phone,
+        Gender,
+        Duration,
+        Country,
+        State,
+        Postcode,
+        appliedCoupon,
+        paymentMethod,
+        walletUsed,
+        paymentStatus: "created",
+        razorpayOrderId: razorpayOrder.id,
+      });
 
-    await order.save();
+      for (const course of courses) {
+        course.totalSales += 1;
+        await course.save();
+      }
 
-    course.totalSales += 1;
-    await course.save();
+      await order.save();
 
-    return res.status(200).json({
-      order,
-      message: "Course purchased successfully",
-    });
-      
+
+      return res.status(200).json({
+         success: true,
+        order,
+        razorpayOrderId: razorpayOrder.id,
+        message: "Course purchased successfully",
+      });
     }
-    
   } catch (error) {
     return next(new ErrorHandler(error.message, 500));
   }
-};
+});
 
-export const getEmployeeDashboard = async (req, res) => {
+
+
+export const verifyPayment = catchAsyncErrors(async (req, res, next) => {
+ try {
+   
+   const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+   const generatedSignature = crypto
+     .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+     .update(razorpay_order_id + "|" + razorpay_payment_id)
+     .digest("hex");
+ 
+   if (generatedSignature !== razorpay_signature) {
+     return next(new ErrorHandler("Invalid payment signature", 400));
+   }
+ 
+  
+   const order = await Order.findOne({ razorpayOrderId: razorpay_order_id });
+   if (!order) {
+     return next(new ErrorHandler("Order not found", 404));
+   }
+ 
+   order.paymentStatus = "paid";
+   order.razorpayPaymentId = razorpay_payment_id;
+   await order.save();
+ 
+   res.status(200).json({
+     success: true,
+     message: "Payment verified and order updated successfully",
+   });
+ } catch (error) {
+  return next(new ErrorHandler(error.message, 500));
+ }
+});
+
+
+
+export const getEmployeeDashboard = catchAsyncErrors(async (req, res, next) => {
   try {
-    const employeeId = req.params.id;
-    const user = await User.findById(employeeId);
+    const userId = req.user;
+
+    const user = await User.findById(userId);
 
     if (!user || user.role !== "employee") {
-      return res.status(404).json({ message: "Employee not found" });
+      return next(new ErrorHandler("Employee not found", 404));
     }
 
-    const order = await Order.find({ referrerId: employeeId }).populate(
-      "courseId"
-    );
+    const order = await Order.find({ referrerId: userId }).populate("courseId");
 
     const totalSales = order.length;
     const totalEarnings = user.earnings;
 
     res.json({
-      employeeName: user.name,
+      employeeName: user?.firstName,
+      order,
       totalSales,
       totalEarnings,
       referralCode: user.referralCode,
@@ -473,20 +461,124 @@ export const getEmployeeDashboard = async (req, res) => {
   } catch (error) {
     return next(new ErrorHandler(error.message, 500));
   }
-};
+});
 
-export const getAdminDashboard = async (req, res) => {
+export const getUserProfile = catchAsyncErrors(async (req, res, next) => {
   try {
-    const employees = await User.find({ role: "employee" }).select(
-      "fullName email earnings referredSales"
-    );
-    const courses = await Course.find();
+    const userId = req.user;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return next(new ErrorHandler("User not founds", 400));
+    }
 
     res.status(200).json({
-      employees,
-      courses,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
     });
   } catch (error) {
     return next(new ErrorHandler(error.message, 500));
   }
-};
+});
+
+export const editAccount = catchAsyncErrors(async (req, res, next) => {
+  try {
+    const userId = req.user;
+
+    const {
+      firstName,
+      lastName,
+      email,
+      oldPassword,
+      newPassword,
+      confirmPassword,
+    } = req.body;
+
+    const user = await User.findById(userId).select("password");
+
+    if (!user) {
+      return next(new ErrorHandler("User not founds", 400));
+    }
+
+    if (firstName) user.firstName = firstName;
+    if (lastName) user.lastName = lastName;
+    if (email) user.email = email;
+
+    if (oldPassword || newPassword || confirmPassword) {
+      if (!oldPassword || !newPassword || !confirmPassword) {
+        return next(new ErrorHandler("All password fields are required", 400));
+      }
+
+      if (newPassword !== confirmPassword) {
+        return next(
+          new ErrorHandler(
+            "New password and confirm password do not match",
+            400
+          )
+        );
+      }
+
+      const isPasswordMatched = await user.comparePassword(oldPassword);
+
+      if (!isPasswordMatched) {
+        return next(new ErrorHandler(" Old password is incorrect ", 400));
+      }
+
+      user.password = newPassword;
+    }
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Account updated successfully",
+    });
+  } catch (error) {
+    return next(new ErrorHandler(error.message, 500));
+  }
+});
+
+export const order = catchAsyncErrors(async (req, res, next) => {
+  try {
+    const userId = req.user._id || req.user;
+
+    const order = await Order.find({ referrerId: userId }).select(
+      "number createdAt paymentStatus finalAmount courseIds orderNumber walletUsed"
+    );
+
+    if (!order) {
+      return next(new ErrorHandler("Order not founds", 400));
+    }
+
+    if (!order || order.length === 0) {
+      return next(new ErrorHandler("No orders found", 400));
+    }
+
+    res.status(200).json({
+      orders: order.map((order) => ({
+        OrderItems: order.courseIds.length,
+        walletUsed: order.walletUsed,
+        orderNumber: order.orderNumber,
+        Date: order.createdAt.toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+        }),
+        Status: order.paymentStatus,
+        Total: order.finalAmount,
+      })),
+    });
+  } catch (error) {
+    return next(new ErrorHandler(error.message, 500));
+  }
+});
+
+export const getWallet = catchAsyncErrors(async (req, res, next) => {
+  const user = await User.findById(req.user._id).select("wallet earnings");
+
+  if (!user) return next(new ErrorHandler("User not found", 404));
+
+  res.status(200).json({
+    wallet: user.wallet,
+    totalEarnings: user.earnings,
+  });
+});

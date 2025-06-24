@@ -56,6 +56,10 @@ const userSchema = new mongoose.Schema(
         return `REF${Math.floor(Math.random() * 1000000)}`;
       },
     },
+    wallet: {
+      type: Number,
+      default: 0,
+    },
 
     earnings: {
       type: Number,

@@ -2,6 +2,17 @@ import mongoose from "mongoose";
 
 const orderSchema = new mongoose.Schema(
   {
+    orderNumber: {
+      type: Number,
+      unique: true,
+      required: true,
+      default: 0,
+    },
+    walletUsed: {
+      type: Number,
+      default: 0,
+    },
+
     amount: {
       type: Number,
       required: true,
@@ -17,10 +28,12 @@ const orderSchema = new mongoose.Schema(
       ref: "User",
     },
 
-    courseId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Course",
-    },
+    courseIds: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Course",
+      },
+    ],
 
     commissionEarned: {
       type: Number,
@@ -49,15 +62,14 @@ const orderSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-    appliedWallet: { 
+    appliedWallet: {
       type: Boolean,
-       default: false 
-      },
+      default: false,
+    },
     appliedCoupon: {
-       type: Boolean,
-        default: false 
-      },
-  
+      type: Boolean,
+      default: false,
+    },
 
     Name: {
       type: String,

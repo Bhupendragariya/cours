@@ -4,6 +4,8 @@ import cookieParser from 'cookie-parser';
 import cors from "cors";
 import { dbConnection } from "./db/dbConnection.js";
 import userRouter from "./routers/user.routers.js";
+import adminRouter from "./routers/admin.router.js";
+
 import { errorMiddleware } from "./middlewares/errorMiddlewares.js";
 
 
@@ -12,6 +14,8 @@ dotenv.config()
 
 
 const app = express()
+
+
 
 
 app.use(cors({
@@ -24,16 +28,13 @@ app.use(express.json());
 app.use(express.urlencoded({extended: true}));
 app.use(cookieParser());
 
+app.use("/app/v1/admin", adminRouter)
 
 app.use("/app/v1/user", userRouter)
 
 
 
 app.use(errorMiddleware)
-
-app.get("/", (req, res) => {
-  res.send("API is working");
-});
 
 const PORT = process.env.PORT || 4000
 
