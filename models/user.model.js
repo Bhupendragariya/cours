@@ -89,6 +89,16 @@ userSchema.methods.comparePassword = async function (Password) {
   return await bcrypt.compare(Password, this.password);
 };
 
+
+userSchema.methods.setRefreshToken = async function (token) {
+  this.refreshToken = await bcrypt.hash(token, 12);
+    await this.save({ validateBeforeSave: false });
+};
+
+userSchema.methods.validateRefreshToken = async function (token) {
+  return await bcrypt.compare(token, this.refreshToken);
+};
+
 userSchema.methods.generateAccessToken = function () {
   return jwt.sign(
     {

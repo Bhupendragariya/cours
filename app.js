@@ -4,7 +4,6 @@ import cookieParser from 'cookie-parser';
 import cors from "cors";
 import { dbConnection } from "./db/dbConnection.js";
 import userRouter from "./routers/user.routers.js";
-import adminRouter from "./routers/admin.router.js";
 
 import { errorMiddleware } from "./middlewares/errorMiddlewares.js";
 
@@ -20,7 +19,7 @@ const app = express()
 
 app.use(cors({
     origin: process.env.CORS_ORIGIN,
-  credentials: "include",
+  credentials: true,
 }));
 
 
@@ -28,7 +27,6 @@ app.use(express.json());
 app.use(express.urlencoded({extended: true}));
 app.use(cookieParser());
 
-app.use("/app/v1/admin", adminRouter)
 
 app.use("/app/v1/user", userRouter)
 

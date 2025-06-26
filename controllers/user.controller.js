@@ -24,6 +24,9 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
+
+
+
 export const getReferralSettings = catchAsyncErrors(async (req, res, next) => {
   try {
     const settings = await ReferralSettings.findOne();
@@ -40,45 +43,43 @@ export const getReferralSettings = catchAsyncErrors(async (req, res, next) => {
 });
 
 export const refreshAccessToken = catchAsyncErrors(async (req, res, next) => {
-  const incomingRefreshToken =
+  const token =
     req.cookies.refreshToken || req.body.refreshToken;
 
-  if (!incomingRefreshToken) {
+  if (!token) {
     return next(new ErrorHandler(401, "unauthorized request"));
   }
 
   try {
     const decoded = jwt.verify(
-      incomingRefreshToken,
+      token,
       process.env.REFRESH_TOKEN_SECRET
     );
-    const user = await User.findById(decoded.id).select("+refreshToken");
+    const user = await User.findById(decoded.id);
 
     if (!user) {
       return next(new ErrorHandler(401, "invalid refresh  token"));
     }
 
-  
-    if (!user.refreshToken || user.refreshToken !== incomingRefreshToken) {
-      return next(new ErrorHandler("Invalid refresh token", 401));
-    }
+      const isValid = await user.validateRefreshToken(token);
+    if (!isValid) return res.status(401).json({ message: "Invalid refresh token" });
 
-    const { accessToken, refreshToken:newRefreshToken } = await generateAccessAndRefreshTokens(
+    const { accessToken: newAccessToken, refreshToken:newRefreshToken } = await generateAccessAndRefreshTokens(
       user._id
     );
-    user.refreshToken = newRefreshToken;
-    await user.save();
 
-    const cookieName = user.role === "Admin" ? "adminToken" : "employeeToken";
+    
+    await user.setRefreshToken(newRefreshToken);
 
-    res.cookie(cookieName, newRefreshToken, {
+    
+    res.cookie("refreshToken", newRefreshToken, {
       httpOnly: true,
       sameSite: "Strict",
     });
 
     res.status(200).json({
       message: "Access token refreshed successfully",
-      accessToken,
+      accessToken: newAccessToken,
     });
   } catch (error) {
     return next(new ErrorHandler(401, "invalid refresh token"));
@@ -127,10 +128,10 @@ export const registerUser = catchAsyncErrors(async (req, res, next) => {
     const {
       accessToken,
       refreshToken,
-      role: userRole,
+      role
     } = await generateAccessAndRefreshTokens(user._id);
 
-    const cookieName = userRole === "Admin" ? "adminToken" : "employeeToken";
+    
 
     res.cookie(cookieName, refreshToken, {
       httpOnly: true,
@@ -148,10 +149,10 @@ export const registerUser = catchAsyncErrors(async (req, res, next) => {
 });
 
 export const login = catchAsyncErrors(async (req, res, next) => {
-  const { email, password, role } = req.body;
+  const { email, password,  } = req.body;
 
   try {
-    if (!email || !password || !role) {
+    if (!email || !password ) {
       return next(new ErrorHandler("please provide email and password", 400));
     }
 
@@ -170,16 +171,14 @@ export const login = catchAsyncErrors(async (req, res, next) => {
 
     const {
       accessToken,
-      refreshToken,
-      role: userRole,
-    } = await generateAccessAndRefreshTokens(user._id);
+      refreshToken   } = await generateAccessAndRefreshTokens(user._id);
 
-    const cookieName = userRole === "Admin" ? "adminToken" : "employeeToken";
 
-    res.cookie(cookieName, refreshToken, {
+    res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       sameSite: "Strict",
     });
+    
 
     res.status(200).json({
       accessToken,

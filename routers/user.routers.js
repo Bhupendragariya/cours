@@ -11,29 +11,49 @@ import {
   refreshAccessToken,
   registerUser,
 } from "../controllers/user.controller.js";
-import {  isEmployeeAuthenticated } from "../middlewares/auth.js";
+
+import { AddAdmin, AddCourse, addWalletAmount, allOrder, approveOfflineOrder, getAdminDashboard, updateReferral,   } from "../controllers/admin.controller.js";
+import { authorizeRoles, isAuthenticated } from "../middlewares/auth.js";
+
 
 const router = Router();
 
-router.get("/employee", isEmployeeAuthenticated, getEmployeeDashboard);
+router.get("/employee", isAuthenticated, getEmployeeDashboard);
 
 router.post("/register", registerUser);
 
 router.post("/login", login);
 
-router.post("/purchase", isEmployeeAuthenticated, purchaseCourse);
+router.post("/purchase", isAuthenticated, purchaseCourse);
 
-router.get("/referral", isEmployeeAuthenticated, getReferralSettings);
+router.get("/referral", isAuthenticated, getReferralSettings);
 
-router.get("/get-Profile", isEmployeeAuthenticated, getUserProfile);
+router.get("/get-Profile", isAuthenticated, getUserProfile);
 
-router.get("/order", isEmployeeAuthenticated, order);
+router.get("/order", isAuthenticated, order);
 
-router.get("/getWallet", isEmployeeAuthenticated, getWallet);
+router.get("/getWallet", isAuthenticated, getWallet);
 
-router.get("/editAccount", isEmployeeAuthenticated, editAccount);
+router.get("/editAccount", isAuthenticated, editAccount);
+
 
 
 router.post("/refresh-token", refreshAccessToken);
+
+
+
+router.post("/newAdmin",isAuthenticated, authorizeRoles, AddAdmin);
+
+router.get("/all-employee", isAuthenticated,authorizeRoles, getAdminDashboard);
+
+router.post("/addCourse", isAuthenticated, authorizeRoles, AddCourse);
+
+router.put("/addDiscount", isAuthenticated, authorizeRoles, updateReferral);
+
+router.post("/add-wallet/:id", isAuthenticated, authorizeRoles, addWalletAmount);
+
+router.put("/approve-order/:orderId", isAuthenticated, authorizeRoles, approveOfflineOrder);
+
+router.get("/allOrder", isAuthenticated, authorizeRoles, allOrder);
 
 export default router;
