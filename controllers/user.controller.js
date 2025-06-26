@@ -96,7 +96,7 @@ export const registerUser = catchAsyncErrors(async (req, res, next) => {
       !lastName ||
       !email ||
       !password ||
-      !phone ||
+      !phone 
      
     ) {
       return next(new ErrorHandler("Please fill out the full form!", 400));
