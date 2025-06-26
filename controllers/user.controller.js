@@ -87,7 +87,7 @@ export const refreshAccessToken = catchAsyncErrors(async (req, res, next) => {
 });
 
 export const registerUser = catchAsyncErrors(async (req, res, next) => {
-  const { firstName, lastName, email, password, gender, phone, dob, role } =
+  const { firstName, lastName, email, password, phone,   } =
     req.body;
 
   try {
@@ -97,9 +97,7 @@ export const registerUser = catchAsyncErrors(async (req, res, next) => {
       !email ||
       !password ||
       !phone ||
-      !gender ||
-      !dob ||
-      !role
+     
     ) {
       return next(new ErrorHandler("Please fill out the full form!", 400));
     }
@@ -110,9 +108,7 @@ export const registerUser = catchAsyncErrors(async (req, res, next) => {
       return next(new ErrorHandler("User already exists", 400));
     }
 
-    if (role !== "employee") {
-      return next(new ErrorHandler("invalid role assignment", 400));
-    }
+
 
     const user = await User.create({
       firstName,
@@ -120,27 +116,29 @@ export const registerUser = catchAsyncErrors(async (req, res, next) => {
       email,
       password,
       phone,
-      gender,
-      dob,
       role: "employee",
     });
 
     const {
       accessToken,
       refreshToken,
-      role
+   
     } = await generateAccessAndRefreshTokens(user._id);
 
     
 
-    res.cookie(cookieName, refreshToken, {
+    res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       sameSite: "Strict",
     });
 
     res.status(200).json({
       accessToken,
-      user,
+      user: {
+      id: user._id,
+      email: user.email,
+      role: user.role,
+    },
       message: "login  successfully",
     });
   } catch (error) {
@@ -575,4 +573,25 @@ export const getWallet = catchAsyncErrors(async (req, res, next) => {
     wallet: user.wallet,
     totalEarnings: user.earnings,
   });
+});
+
+
+
+
+
+export const logoutUser = catchAsyncErrors(async (req, res, next) => {
+
+  try {
+      res.clearCookie('token', {
+    httpOnly: true,
+    sameSite: "Strict",
+ 
+  });
+
+  res.status(200).json({ message: "Logged out successfully" });
+
+  } catch (error) {
+    return next(new ErrorHandler(error.message, 500));
+  }
+
 });

@@ -26,17 +26,6 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
 
-    dob: {
-      type: Date,
-      required: [true, "Date of birth is required"],
-    },
-
-    gender: {
-      type: String,
-      required: true,
-      enum: ["Male", "Female", "other"],
-    },
-
     password: {
       type: String,
       required: [true, "Password is required"],

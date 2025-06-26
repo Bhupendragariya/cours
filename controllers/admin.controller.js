@@ -27,7 +27,7 @@ export const updateReferral = catchAsyncErrors(async (req, res, next) => {
 });
 
 export const AddAdmin = catchAsyncErrors(async (req, res, next) => {
-  const { firstName, lastName, email, password, phone, gender, dob, role } =
+  const { firstName, lastName, email, password, phone,  role } =
     req.body;
 
   try {
@@ -37,8 +37,7 @@ export const AddAdmin = catchAsyncErrors(async (req, res, next) => {
       !email ||
       !password ||
       !phone ||
-      !gender ||
-      !dob ||
+      
       !role
     ) {
       return next(new ErrorHandler("Please fill out the full form!", 400));
@@ -62,27 +61,24 @@ export const AddAdmin = catchAsyncErrors(async (req, res, next) => {
       email,
       phone,
       password,
-      gender,
-      dob,
+     
       role: "Admin",
     });
 
     const {
       accessToken,
-      refreshToken,
-      role: userRole,
+      refreshToken
     } = await generateAccessAndRefreshTokens(user._id);
 
-    const cookieName = userRole === "Admin" ? "adminToken" : "employeeToken";
+  
 
-    res.cookie(cookieName, accessToken, {
+    res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       sameSite: "Strict",
     });
 
     res.status(200).json({
       accessToken,
-      refreshToken,
       user,
       message: "admin create successfully",
     });

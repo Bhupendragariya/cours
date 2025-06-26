@@ -6,6 +6,7 @@ import {
   getUserProfile,
   getWallet,
   login,
+  logoutUser,
   order,
   purchaseCourse,
   refreshAccessToken,
@@ -23,6 +24,9 @@ router.get("/employee", isAuthenticated, getEmployeeDashboard);
 router.post("/register", registerUser);
 
 router.post("/login", login);
+
+router.post("/logout", logoutUser);
+
 
 router.post("/purchase", isAuthenticated, purchaseCourse);
 
